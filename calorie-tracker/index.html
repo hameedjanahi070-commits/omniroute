@@ -1,0 +1,1646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CalorieTracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ===== RESET & BASE ===== */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f0f0f;--card:#1a1a2e;--card-hover:#22224a;--accent:#00d4aa;--accent2:#4fc3f7;
+  --text:#e0e0e0;--text-dim:#888;--text-bright:#fff;--danger:#ff5252;--warning:#ffab40;
+  --success:#69f0ae;--sidebar-w:240px;--radius:16px;--radius-sm:10px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+button{font-family:inherit;cursor:pointer;border:none;outline:none}
+input,select{font-family:inherit;outline:none}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:#333;border-radius:3px}
+
+/* ===== LAYOUT ===== */
+.app{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--card);position:fixed;top:0;left:0;height:100vh;
+  display:flex;flex-direction:column;z-index:100;transition:transform .3s ease;border-right:1px solid #ffffff08}
+.sidebar-logo{padding:28px 24px 20px;display:flex;align-items:center;gap:12px}
+.sidebar-logo .logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;color:#0f0f0f}
+.sidebar-logo h1{font-size:18px;font-weight:700;color:var(--text-bright)}
+.sidebar-nav{flex:1;padding:8px 12px;display:flex;flex-direction:column;gap:4px}
+.nav-item{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:var(--radius-sm);
+  color:var(--text-dim);font-size:14px;font-weight:500;transition:all .2s ease;cursor:pointer;background:transparent}
+.nav-item:hover{background:#ffffff08;color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,rgba(0,212,170,.15),rgba(79,195,247,.08));
+  color:var(--accent);font-weight:600}
+.nav-item .nav-icon{font-size:20px;width:24px;text-align:center}
+.sidebar-footer{padding:16px 20px;border-top:1px solid #ffffff08;font-size:11px;color:var(--text-dim);text-align:center}
+.main{flex:1;margin-left:var(--sidebar-w);padding:24px 32px 100px;transition:margin .3s ease}
+
+/* ===== BOTTOM NAV (mobile) ===== */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--card);
+  border-top:1px solid #ffffff10;z-index:100;padding:6px 0 env(safe-area-inset-bottom,8px)}
+.bottom-nav-inner{display:flex;justify-content:space-around;align-items:center}
+.bottom-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;
+  border-radius:12px;color:var(--text-dim);font-size:10px;cursor:pointer;transition:all .2s}
+.bottom-nav-item .bnav-icon{font-size:22px}
+.bottom-nav-item.active{color:var(--accent)}
+
+/* ===== PAGES ===== */
+.page{display:none;animation:fadeIn .4s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== CARDS ===== */
+.card{background:var(--card);border-radius:var(--radius);padding:24px;border:1px solid #ffffff06;
+  transition:all .3s ease}
+.card:hover{border-color:#ffffff12}
+.card-title{font-size:14px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+
+/* ===== DASHBOARD ===== */
+.dashboard-greeting h2{font-size:28px;font-weight:700;color:var(--text-bright);margin-bottom:4px}
+.dashboard-greeting p{color:var(--text-dim);font-size:14px;margin-bottom:28px}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px}
+.stat-card{text-align:center;padding:28px 20px}
+.stat-card .stat-value{font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-card .stat-label{font-size:12px;color:var(--text-dim);margin-top:6px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Progress Ring */
+.ring-container{display:flex;justify-content:center;align-items:center;padding:20px}
+.ring-wrapper{position:relative;width:200px;height:200px}
+.ring-wrapper svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:#ffffff08;stroke-width:12}
+.ring-progress{fill:none;stroke:url(#ringGrad);stroke-width:12;stroke-linecap:round;
+  transition:stroke-dashoffset 1s ease}
+.ring-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.ring-text .ring-cals{font-size:32px;font-weight:800;color:var(--text-bright)}
+.ring-text .ring-label{font-size:11px;color:var(--text-dim);margin-top:2px}
+
+/* Macros */
+.macros-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}
+.macro-item{text-align:center}
+.macro-item .macro-label{font-size:12px;color:var(--text-dim);margin-bottom:8px}
+.macro-bar-track{height:6px;background:#ffffff08;border-radius:3px;overflow:hidden}
+.macro-bar-fill{height:100%;border-radius:3px;transition:width .8s ease}
+.macro-bar-fill.protein{background:#ff6b9d}
+.macro-bar-fill.carbs{background:var(--accent)}
+.macro-bar-fill.fat{background:var(--warning)}
+.macro-item .macro-val{font-size:13px;font-weight:600;color:var(--text-bright);margin-top:6px}
+
+/* Weekly Chart */
+.weekly-chart{display:flex;align-items:flex-end;gap:12px;height:160px;padding:20px 0 0}
+.chart-bar-wrapper{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px}
+.chart-bar{width:100%;border-radius:6px 6px 0 0;background:linear-gradient(to top,var(--accent),var(--accent2));
+  transition:height .8s ease;min-height:4px;position:relative}
+.chart-bar:hover{filter:brightness(1.2)}
+.chart-bar-label{font-size:11px;color:var(--text-dim)}
+.chart-bar-val{font-size:10px;color:var(--text-dim);position:absolute;top:-18px;left:50%;transform:translateX(-50%);white-space:nowrap}
+
+/* Today meals summary */
+.today-meals{margin-top:20px}
+.today-meal-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;
+  border-bottom:1px solid #ffffff06}
+.today-meal-row:last-child{border:none}
+.today-meal-row .meal-name{font-size:14px;color:var(--text)}
+.today-meal-row .meal-cals{font-size:14px;font-weight:600;color:var(--accent)}
+
+/* ===== CALCULATOR ===== */
+.calc-form{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-group label{font-size:13px;font-weight:500;color:var(--text-dim)}
+.form-group input,.form-group select{padding:12px 16px;background:#0f0f1a;border:1px solid #ffffff10;
+  border-radius:var(--radius-sm);color:var(--text-bright);font-size:14px;transition:border .2s}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-group select option{background:#1a1a2e}
+.calc-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#0f0f0f;font-size:15px;font-weight:700;border-radius:var(--radius-sm);margin-top:8px;
+  transition:transform .2s,box-shadow .2s;grid-column:1/-1}
+.calc-btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,212,170,.3)}
+.calc-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-top:24px}
+.result-card{background:#0f0f1a;border-radius:var(--radius-sm);padding:20px;text-align:center;
+  border:1px solid #ffffff06;animation:popIn .5s ease}
+@keyframes popIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.result-card .result-val{font-size:28px;font-weight:800;color:var(--accent)}
+.result-card .result-label{font-size:11px;color:var(--text-dim);margin-top:4px;text-transform:uppercase}
+.save-goal-btn{padding:12px 32px;background:var(--accent);color:#0f0f0f;font-weight:700;
+  border-radius:var(--radius-sm);margin-top:16px;font-size:14px;transition:all .2s}
+.save-goal-btn:hover{background:var(--accent2)}
+
+/* ===== FOOD LOGGER ===== */
+.logger-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.date-picker{display:flex;align-items:center;gap:12px}
+.date-picker input[type="date"]{padding:10px 14px;background:#0f0f1a;border:1px solid #ffffff10;
+  border-radius:var(--radius-sm);color:var(--text-bright);font-size:14px}
+.date-picker input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) brightness(.7)}
+.daily-total{font-size:20px;font-weight:700;color:var(--accent)}
+.meal-section{margin-bottom:20px}
+.meal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 0;
+  border-bottom:1px solid #ffffff08}
+.meal-header h3{font-size:16px;font-weight:600;color:var(--text-bright);display:flex;align-items:center;gap:8px}
+.meal-header .meal-total{font-size:14px;color:var(--accent);font-weight:600}
+.add-food-btn{padding:8px 16px;background:rgba(0,212,170,.12);color:var(--accent);border-radius:8px;
+  font-size:13px;font-weight:600;transition:all .2s}
+.add-food-btn:hover{background:rgba(0,212,170,.25)}
+.food-list{padding:8px 0}
+.food-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;
+  border-radius:8px;margin:4px 0;background:#0f0f1a;transition:background .2s}
+.food-item:hover{background:#15152a}
+.food-item .food-name{font-size:14px;color:var(--text)}
+.food-item .food-cals{font-size:14px;font-weight:600;color:var(--text-dim);display:flex;align-items:center;gap:12px}
+.food-item .delete-food{width:28px;height:28px;border-radius:6px;background:rgba(255,82,82,.1);
+  color:var(--danger);display:flex;align-items:center;justify-content:center;font-size:14px;
+  cursor:pointer;transition:all .2s}
+.food-item .delete-food:hover{background:rgba(255,82,82,.25)}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);
+  z-index:200;display:none;align-items:center;justify-content:center;padding:20px;
+  animation:fadeIn .2s ease}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:var(--radius);padding:28px;width:100%;max-width:480px;
+  max-height:80vh;overflow-y:auto;border:1px solid #ffffff10;animation:popIn .3s ease}
+.modal h3{font-size:18px;font-weight:700;color:var(--text-bright);margin-bottom:20px}
+.modal-close{position:absolute;top:16px;right:20px;font-size:24px;color:var(--text-dim);
+  cursor:pointer;background:none}
+.quick-foods{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.quick-food{padding:8px 14px;background:#0f0f1a;border:1px solid #ffffff08;border-radius:20px;
+  color:var(--text);font-size:12px;cursor:pointer;transition:all .2s}
+.quick-food:hover{border-color:var(--accent);color:var(--accent)}
+.quick-food.selected{background:rgba(0,212,170,.15);border-color:var(--accent);color:var(--accent)}
+.modal-actions{display:flex;gap:12px;margin-top:20px}
+.modal-actions button{flex:1;padding:12px;border-radius:var(--radius-sm);font-weight:600;font-size:14px}
+.btn-primary{background:var(--accent);color:#0f0f0f}
+.btn-primary:hover{background:#00e6b8}
+.btn-secondary{background:#ffffff08;color:var(--text)}
+
+/* ===== TIPS ===== */
+.tips-category{margin-bottom:32px}
+.tips-category-title{font-size:20px;font-weight:700;color:var(--text-bright);margin-bottom:16px;
+  display:flex;align-items:center;gap:10px}
+.tips-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.tip-card{padding:20px;cursor:pointer;position:relative;overflow:hidden}
+.tip-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;
+  background:linear-gradient(to bottom,var(--accent),var(--accent2));border-radius:0 2px 2px 0}
+.tip-card .tip-title{font-size:15px;font-weight:600;color:var(--text-bright);margin-bottom:8px;
+  display:flex;align-items:center;gap:8px}
+.tip-card .tip-desc{font-size:13px;color:var(--text-dim);line-height:1.6;max-height:0;
+  overflow:hidden;transition:max-height .4s ease}
+.tip-card.open .tip-desc{max-height:200px}
+.tip-card .tip-toggle{font-size:11px;color:var(--accent);margin-top:6px;font-weight:500}
+
+/* ===== MEAL PLAN ===== */
+.plan-controls{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:flex-end}
+.plan-controls .form-group{min-width:160px}
+.generate-btn{padding:12px 28px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#0f0f0f;font-weight:700;border-radius:var(--radius-sm);font-size:14px;transition:all .2s;
+  align-self:flex-end;height:fit-content}
+.generate-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,212,170,.3)}
+.shuffle-btn{padding:10px 20px;background:#ffffff08;color:var(--text);border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;transition:all .2s}
+.shuffle-btn:hover{background:#ffffff12}
+.day-card{margin-bottom:16px;overflow:hidden}
+.day-card-header{display:flex;justify-content:space-between;align-items:center;cursor:pointer;
+  padding:4px 0}
+.day-card-header h3{font-size:16px;font-weight:600;color:var(--text-bright);display:flex;align-items:center;gap:8px}
+.day-card-header .day-total{font-size:14px;color:var(--accent);font-weight:600}
+.day-meals{padding-top:12px;display:none}
+.day-card.open .day-meals{display:block}
+.day-meal{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;
+  background:#0f0f1a;border-radius:8px;margin:6px 0}
+.day-meal .dm-label{font-size:12px;color:var(--accent);font-weight:600;text-transform:uppercase;
+  letter-spacing:.5px;min-width:70px}
+.day-meal .dm-food{font-size:14px;color:var(--text);flex:1;margin:0 12px}
+.day-meal .dm-cals{font-size:13px;color:var(--text-dim);font-weight:600;white-space:nowrap}
+
+/* ===== EXERCISE PLAN ===== */
+.exercise-controls{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap;align-items:flex-end}
+.workout-day{margin-bottom:20px}
+.workout-day-header{font-size:17px;font-weight:700;color:var(--text-bright);margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:1px solid #ffffff08}
+.exercise-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.exercise-card{padding:16px;display:flex;gap:14px;align-items:flex-start}
+.exercise-card .ex-icon{font-size:28px;min-width:36px;text-align:center}
+.exercise-card .ex-info{flex:1}
+.exercise-card .ex-name{font-size:14px;font-weight:600;color:var(--text-bright)}
+.exercise-card .ex-detail{font-size:12px;color:var(--text-dim);margin-top:4px}
+.exercise-card .ex-muscle{font-size:11px;color:var(--accent);margin-top:4px;font-weight:500}
+.exercise-card .ex-cals{font-size:12px;color:var(--warning);font-weight:600;margin-top:4px}
+.weekly-burn-summary{margin-top:20px;text-align:center}
+.weekly-burn-summary .burn-value{font-size:32px;font-weight:800;color:var(--accent)}
+.weekly-burn-summary .burn-label{font-size:13px;color:var(--text-dim);margin-top:4px}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;top:20px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px}
+.toast{padding:14px 20px;background:var(--card);border:1px solid #ffffff10;border-radius:var(--radius-sm);
+  color:var(--text-bright);font-size:13px;font-weight:500;animation:slideIn .3s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{border-left:3px solid var(--success)}
+.toast.info{border-left:3px solid var(--accent2)}
+.toast.error{border-left:3px solid var(--danger)}
+
+/* ===== CONFETTI ===== */
+.confetti-container{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;overflow:hidden}
+.confetti{position:absolute;width:10px;height:10px;border-radius:2px;animation:confettiFall 3s ease-out forwards}
+@keyframes confettiFall{
+  0%{transform:translateY(-20px) rotate(0deg);opacity:1}
+  100%{transform:translateY(100vh) rotate(720deg);opacity:0}
+}
+
+/* ===== PAGE HEADERS ===== */
+.page-header{margin-bottom:28px}
+.page-header h2{font-size:26px;font-weight:700;color:var(--text-bright)}
+.page-header p{color:var(--text-dim);font-size:14px;margin-top:4px}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .main{margin-left:0;padding:20px 16px 100px}
+  .bottom-nav{display:block}
+  .dash-grid{grid-template-columns:1fr}
+  .calc-form{grid-template-columns:1fr}
+  .macros-grid{grid-template-columns:1fr 1fr 1fr}
+  .plan-controls,.exercise-controls{flex-direction:column}
+  .plan-controls .form-group,.exercise-controls .form-group{width:100%}
+  .tips-grid{grid-template-columns:1fr}
+  .exercise-grid{grid-template-columns:1fr}
+  .ring-wrapper{width:160px;height:160px}
+}
+@media(min-width:769px) and (max-width:1024px){
+  .dash-grid{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">C</div>
+      <h1>CalorieTracker</h1>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</div>
+      <div class="nav-item" data-page="calculator"><span class="nav-icon">🔢</span>Calculator</div>
+      <div class="nav-item" data-page="logger"><span class="nav-icon">📝</span>Food Logger</div>
+      <div class="nav-item" data-page="tips"><span class="nav-icon">💡</span>Tips</div>
+      <div class="nav-item" data-page="mealplan"><span class="nav-icon">📋</span>Meal Plan</div>
+      <div class="nav-item" data-page="exercise"><span class="nav-icon">🏃</span>Exercise</div>
+    </nav>
+    <div class="sidebar-footer">CalorieTracker v1.0 &mdash; Your Data Stays Local</div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- ===== DASHBOARD PAGE ===== -->
+    <div class="page active" id="page-dashboard">
+      <div class="dashboard-greeting">
+        <h2 id="greeting-text">Good Morning! 👋</h2>
+        <p>Here's your nutrition summary for today.</p>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card stat-card">
+          <div class="stat-value" id="dash-consumed">0</div>
+          <div class="stat-label">Calories Consumed</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="dash-remaining">2000</div>
+          <div class="stat-label">Remaining</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-value" id="dash-goal">2000</div>
+          <div class="stat-label">Daily Goal</div>
+        </div>
+      </div>
+
+      <div class="dash-grid" style="grid-template-columns:1fr 1fr">
+        <div class="card">
+          <div class="card-title">Today's Progress</div>
+          <div class="ring-container">
+            <div class="ring-wrapper">
+              <svg viewBox="0 0 200 200" width="100%" height="100%">
+                <defs>
+                  <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00d4aa"/>
+                    <stop offset="100%" stop-color="#4fc3f7"/>
+                  </linearGradient>
+                </defs>
+                <circle class="ring-bg" cx="100" cy="100" r="85"/>
+                <circle class="ring-progress" id="progress-ring" cx="100" cy="100" r="85"
+                  stroke-dasharray="534" stroke-dashoffset="534"/>
+              </svg>
+              <div class="ring-text">
+                <div class="ring-cals" id="ring-percent">0%</div>
+                <div class="ring-label">of daily goal</div>
+              </div>
+            </div>
+          </div>
+          <div class="macros-grid">
+            <div class="macro-item">
+              <div class="macro-label">Protein</div>
+              <div class="macro-bar-track"><div class="macro-bar-fill protein" id="macro-protein" style="width:0%"></div></div>
+              <div class="macro-val" id="macro-protein-val">0g</div>
+            </div>
+            <div class="macro-item">
+              <div class="macro-label">Carbs</div>
+              <div class="macro-bar-track"><div class="macro-bar-fill carbs" id="macro-carbs" style="width:0%"></div></div>
+              <div class="macro-val" id="macro-carbs-val">0g</div>
+            </div>
+            <div class="macro-item">
+              <div class="macro-label">Fat</div>
+              <div class="macro-bar-track"><div class="macro-bar-fill fat" id="macro-fat" style="width:0%"></div></div>
+              <div class="macro-val" id="macro-fat-val">0g</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Weekly Overview</div>
+          <div class="weekly-chart" id="weekly-chart"></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          Today's Meals
+          <button class="add-food-btn" onclick="navigateTo('logger')">+ Log Food</button>
+        </div>
+        <div class="today-meals" id="today-meals-summary">
+          <div class="today-meal-row"><span class="meal-name">🌅 Breakfast</span><span class="meal-cals" id="dash-breakfast">0 cal</span></div>
+          <div class="today-meal-row"><span class="meal-name">☀️ Lunch</span><span class="meal-cals" id="dash-lunch">0 cal</span></div>
+          <div class="today-meal-row"><span class="meal-name">🌙 Dinner</span><span class="meal-cals" id="dash-dinner">0 cal</span></div>
+          <div class="today-meal-row"><span class="meal-name">🍪 Snacks</span><span class="meal-cals" id="dash-snacks">0 cal</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CALCULATOR PAGE ===== -->
+    <div class="page" id="page-calculator">
+      <div class="page-header">
+        <h2>Calorie Calculator 🔢</h2>
+        <p>Calculate your daily calorie needs based on your body and goals.</p>
+      </div>
+      <div class="card">
+        <div class="calc-form" id="calc-form">
+          <div class="form-group">
+            <label>Age</label>
+            <input type="number" id="calc-age" placeholder="25" min="10" max="100">
+          </div>
+          <div class="form-group">
+            <label>Gender</label>
+            <select id="calc-gender">
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Height (cm)</label>
+            <input type="number" id="calc-height" placeholder="175" min="100" max="250">
+          </div>
+          <div class="form-group">
+            <label>Weight (kg)</label>
+            <input type="number" id="calc-weight" placeholder="70" min="30" max="300">
+          </div>
+          <div class="form-group">
+            <label>Activity Level</label>
+            <select id="calc-activity">
+              <option value="1.2">Sedentary (little or no exercise)</option>
+              <option value="1.375">Lightly active (1-3 days/week)</option>
+              <option value="1.55" selected>Moderately active (3-5 days/week)</option>
+              <option value="1.725">Very active (6-7 days/week)</option>
+              <option value="1.9">Super active (athlete)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Goal</label>
+            <select id="calc-goal">
+              <option value="-500">Lose weight (-500 cal/day)</option>
+              <option value="0" selected>Maintain weight</option>
+              <option value="500">Gain weight (+500 cal/day)</option>
+            </select>
+          </div>
+          <button class="calc-btn" onclick="calculateCalories()">Calculate My Calories</button>
+        </div>
+        <div class="calc-results" id="calc-results" style="display:none"></div>
+        <div style="text-align:center;margin-top:16px" id="save-goal-container" style="display:none">
+          <button class="save-goal-btn" id="save-goal-btn" style="display:none" onclick="saveGoal()">✅ Set As My Daily Goal</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FOOD LOGGER PAGE ===== -->
+    <div class="page" id="page-logger">
+      <div class="page-header">
+        <h2>Food Logger 📝</h2>
+        <p>Track everything you eat throughout the day.</p>
+      </div>
+      <div class="card">
+        <div class="logger-header">
+          <div class="date-picker">
+            <label style="font-size:13px;color:var(--text-dim)">Date:</label>
+            <input type="date" id="logger-date">
+          </div>
+          <div class="daily-total">Total: <span id="logger-total">0</span> cal</div>
+        </div>
+
+        <!-- Breakfast -->
+        <div class="meal-section">
+          <div class="meal-header">
+            <h3>🌅 Breakfast <span class="meal-total" id="total-breakfast">0 cal</span></h3>
+            <button class="add-food-btn" onclick="openFoodModal('breakfast')">+ Add</button>
+          </div>
+          <div class="food-list" id="list-breakfast"></div>
+        </div>
+        <!-- Lunch -->
+        <div class="meal-section">
+          <div class="meal-header">
+            <h3>☀️ Lunch <span class="meal-total" id="total-lunch">0 cal</span></h3>
+            <button class="add-food-btn" onclick="openFoodModal('lunch')">+ Add</button>
+          </div>
+          <div class="food-list" id="list-lunch"></div>
+        </div>
+        <!-- Dinner -->
+        <div class="meal-section">
+          <div class="meal-header">
+            <h3>🌙 Dinner <span class="meal-total" id="total-dinner">0 cal</span></h3>
+            <button class="add-food-btn" onclick="openFoodModal('dinner')">+ Add</button>
+          </div>
+          <div class="food-list" id="list-dinner"></div>
+        </div>
+        <!-- Snacks -->
+        <div class="meal-section">
+          <div class="meal-header">
+            <h3>🍪 Snacks <span class="meal-total" id="total-snacks">0 cal</span></h3>
+            <button class="add-food-btn" onclick="openFoodModal('snacks')">+ Add</button>
+          </div>
+          <div class="food-list" id="list-snacks"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TIPS PAGE ===== -->
+    <div class="page" id="page-tips">
+      <div class="page-header">
+        <h2>Calorie Tips 💡</h2>
+        <p>Science-backed tips to help you reach your goals.</p>
+      </div>
+      <div id="tips-container"></div>
+    </div>
+
+    <!-- ===== MEAL PLAN PAGE ===== -->
+    <div class="page" id="page-mealplan">
+      <div class="page-header">
+        <h2>Meal Plan Generator 📋</h2>
+        <p>Get a personalized 7-day meal plan based on your calorie target.</p>
+      </div>
+      <div class="card">
+        <div class="plan-controls">
+          <div class="form-group">
+            <label>Goal</label>
+            <select id="plan-goal">
+              <option value="cut">Cut (Weight Loss)</option>
+              <option value="maintain" selected>Maintain</option>
+              <option value="bulk">Bulk (Weight Gain)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Daily Calories</label>
+            <select id="plan-calories">
+              <option value="1500">1,500 cal</option>
+              <option value="1800">1,800 cal</option>
+              <option value="2000" selected>2,000 cal</option>
+              <option value="2200">2,200 cal</option>
+              <option value="2500">2,500 cal</option>
+              <option value="2800">2,800 cal</option>
+              <option value="3000">3,000 cal</option>
+            </select>
+          </div>
+          <button class="generate-btn" onclick="generateMealPlan()">🍽️ Generate Plan</button>
+          <button class="shuffle-btn" onclick="shuffleMealPlan()">🔀 Shuffle</button>
+        </div>
+        <div id="meal-plan-output"></div>
+      </div>
+    </div>
+
+    <!-- ===== EXERCISE PAGE ===== -->
+    <div class="page" id="page-exercise">
+      <div class="page-header">
+        <h2>Exercise Plan 🏃</h2>
+        <p>Get a weekly workout plan tailored to your goals.</p>
+      </div>
+      <div class="card">
+        <div class="exercise-controls">
+          <div class="form-group">
+            <label>Goal</label>
+            <select id="ex-goal">
+              <option value="weightloss">Weight Loss</option>
+              <option value="muscle" selected>Muscle Building</option>
+              <option value="fitness">General Fitness</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Experience</label>
+            <select id="ex-level">
+              <option value="beginner" selected>Beginner</option>
+              <option value="intermediate">Intermediate</option>
+              <option value="advanced">Advanced</option>
+            </select>
+          </div>
+          <button class="generate-btn" onclick="generateExercisePlan()">💪 Generate Plan</button>
+        </div>
+        <div id="exercise-plan-output"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- BOTTOM NAV (mobile) -->
+<div class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="bottom-nav-item active" data-page="dashboard"><span class="bnav-icon">📊</span>Home</div>
+    <div class="bottom-nav-item" data-page="calculator"><span class="bnav-icon">🔢</span>Calc</div>
+    <div class="bottom-nav-item" data-page="logger"><span class="bnav-icon">📝</span>Log</div>
+    <div class="bottom-nav-item" data-page="tips"><span class="bnav-icon">💡</span>Tips</div>
+    <div class="bottom-nav-item" data-page="mealplan"><span class="bnav-icon">📋</span>Plan</div>
+    <div class="bottom-nav-item" data-page="exercise"><span class="bnav-icon">🏃</span>Gym</div>
+  </div>
+</div>
+
+<!-- FOOD MODAL -->
+<div class="modal-overlay" id="food-modal">
+  <div class="modal">
+    <h3 id="modal-title">Add Food</h3>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>Food Name</label>
+      <input type="text" id="modal-food-name" placeholder="e.g. Chicken Breast">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="form-group">
+        <label>Calories</label>
+        <input type="number" id="modal-food-cals" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Protein (g)</label>
+        <input type="number" id="modal-food-protein" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Carbs (g)</label>
+        <input type="number" id="modal-food-carbs" placeholder="0">
+      </div>
+      <div class="form-group">
+        <label>Fat (g)</label>
+        <input type="number" id="modal-food-fat" placeholder="0">
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--text-dim);margin-bottom:8px">Quick Add:</div>
+    <div class="quick-foods" id="quick-foods"></div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeFoodModal()">Cancel</button>
+      <button class="btn-primary" onclick="addFoodFromModal()">Add Food</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+/* =====================================================================
+   CALORIE TRACKER — FULL SPA APPLICATION
+   ===================================================================== */
+
+// ===== COMMON FOOD DATABASE =====
+const COMMON_FOODS = [
+  { name: 'Rice (1 cup)', cals: 200, protein: 4, carbs: 45, fat: 0 },
+  { name: 'Chicken Breast', cals: 165, protein: 31, carbs: 0, fat: 3.6 },
+  { name: 'Egg', cals: 78, protein: 6, carbs: 0.6, fat: 5 },
+  { name: 'Banana', cals: 105, protein: 1.3, carbs: 27, fat: 0.4 },
+  { name: 'Apple', cals: 95, protein: 0.5, carbs: 25, fat: 0.3 },
+  { name: 'Bread (1 slice)', cals: 79, protein: 3, carbs: 15, fat: 1 },
+  { name: 'Milk (1 glass)', cals: 149, protein: 8, carbs: 12, fat: 8 },
+  { name: 'Salad', cals: 50, protein: 2, carbs: 8, fat: 1 },
+  { name: 'Pasta (1 cup)', cals: 220, protein: 8, carbs: 43, fat: 1.3 },
+  { name: 'Steak (6oz)', cals: 271, protein: 26, carbs: 0, fat: 18 },
+  { name: 'Yogurt', cals: 100, protein: 10, carbs: 12, fat: 2 },
+  { name: 'Oatmeal', cals: 150, protein: 5, carbs: 27, fat: 3 },
+  { name: 'Rice & Chicken', cals: 365, protein: 35, carbs: 45, fat: 4 },
+  { name: 'Protein Shake', cals: 120, protein: 24, carbs: 3, fat: 1 },
+  { name: 'Almonds (1oz)', cals: 164, protein: 6, carbs: 6, fat: 14 },
+  { name: 'Avocado', cals: 240, protein: 3, carbs: 12, fat: 22 },
+  { name: 'Sweet Potato', cals: 103, protein: 2, carbs: 24, fat: 0.1 },
+  { name: 'Salmon (4oz)', cals: 208, protein: 20, carbs: 0, fat: 13 },
+  { name: 'Broccoli (1 cup)', cals: 55, protein: 4, carbs: 11, fat: 0.6 },
+  { name: 'Orange', cals: 62, protein: 1, carbs: 15, fat: 0.2 }
+];
+
+// ===== TIPS DATABASE =====
+const TIPS_DATA = [
+  {
+    category: '🔥 Weight Loss Tips', tips: [
+      { icon: '📏', title: 'Track Everything', desc: 'Logging every bite keeps you accountable. Studies show people who track their food lose twice as much weight as those who don\'t.' },
+      { icon: '🥤', title: 'Drink Water Before Meals', desc: 'Drinking 500ml of water 30 minutes before meals can reduce hunger and help you eat 75-90 fewer calories per meal.' },
+      { icon: '🥦', title: 'Eat More Fiber', desc: 'Fiber-rich foods like vegetables, fruits, and whole grains keep you full longer. Aim for 25-30g of fiber per day.' },
+      { icon: '🍳', title: 'Prioritize Protein', desc: 'Protein boosts metabolism by 15-30% during digestion and keeps you satiated. Aim for 0.7-1g per pound of body weight.' },
+      { icon: '🚫', title: 'Avoid Liquid Calories', desc: 'Sodas, juices, and fancy coffees can add 300-500 hidden calories daily. Stick to water, black coffee, and unsweetened tea.' },
+      { icon: '🍽️', title: 'Use Smaller Plates', desc: 'Research shows that using 9-inch plates instead of 12-inch plates naturally reduces portion sizes by 20-25%.' },
+      { icon: '🛒', title: 'Shop the Perimeter', desc: 'Grocery store perimeters stock fresh produce, meats, and dairy. The center aisles are where ultra-processed foods live.' },
+      { icon: '😴', title: 'Sleep 7-9 Hours', desc: 'Poor sleep increases hunger hormones (ghrelin) by 28% and decreases satiety hormones (leptin), leading to overeating.' }
+    ]
+  },
+  {
+    category: '💪 Muscle Building Tips', tips: [
+      { icon: '🥩', title: 'Eat in a Caloric Surplus', desc: 'To build muscle, eat 200-500 calories above your maintenance. A slow bulk minimizes fat gain while maximizing muscle growth.' },
+      { icon: '🏋️', title: 'Progressive Overload', desc: 'Gradually increase weight, reps, or sets each week. Your muscles need increasing stimulus to keep growing.' },
+      { icon: '🥚', title: 'Spread Protein Intake', desc: 'Consume 20-40g of protein across 4-5 meals per day for optimal muscle protein synthesis throughout the day.' },
+      { icon: '⏰', title: 'Post-Workout Nutrition', desc: 'Eat a meal with protein and carbs within 2 hours after training to maximize recovery and muscle repair.' },
+      { icon: '🍚', title: 'Don\'t Fear Carbs', desc: 'Carbohydrates fuel intense workouts and help with recovery. Aim for 2-3g per pound of body weight on training days.' },
+      { icon: '💧', title: 'Stay Hydrated', desc: 'Dehydration of just 2% can decrease strength by up to 20%. Drink at least 1 gallon (3.7L) of water daily when training.' }
+    ]
+  },
+  {
+    category: '🥗 Healthy Eating Tips', tips: [
+      { icon: '🌈', title: 'Eat the Rainbow', desc: 'Different colored fruits and vegetables provide different nutrients. Aim for at least 5 different colors on your plate each day.' },
+      { icon: '🧂', title: 'Watch Your Sodium', desc: 'Keep sodium under 2,300mg per day. High sodium intake is linked to high blood pressure and water retention.' },
+      { icon: '🥑', title: 'Choose Healthy Fats', desc: 'Focus on unsaturated fats from avocados, olive oil, nuts, and fatty fish. Avoid trans fats and limit saturated fats.' },
+      { icon: '🍞', title: 'Choose Whole Grains', desc: 'Whole grains have more fiber, vitamins, and minerals than refined grains. Swap white bread for whole wheat, white rice for brown.' },
+      { icon: '🥩', title: 'Vary Your Protein', desc: 'Mix animal and plant proteins. Beans, lentils, tofu, and quinoa are excellent protein sources with additional health benefits.' },
+      { icon: '🍽️', title: 'Practice Mindful Eating', desc: 'Eat slowly, chew thoroughly, and pay attention to hunger cues. It takes 20 minutes for your brain to register fullness.' },
+      { icon: '📅', title: 'Meal Prep Sundays', desc: 'Preparing meals in advance saves time, money, and prevents unhealthy impulse choices during busy weekdays.' },
+      { icon: '📖', title: 'Read Food Labels', desc: 'Check serving sizes, added sugars, and ingredient lists. If sugar is in the first 3 ingredients, reconsider the product.' }
+    ]
+  },
+  {
+    category: '💧 Hydration Tips', tips: [
+      { icon: '🚰', title: 'Baseline Water Intake', desc: 'Drink at least 8 cups (2L) of water daily. If you\'re active, add 500ml for every 30 minutes of exercise.' },
+      { icon: '🍋', title: 'Flavor Your Water', desc: 'Add lemon, cucumber, mint, or berries to your water for natural flavor without added sugars or calories.' },
+      { icon: '📱', title: 'Set Reminders', desc: 'Use your phone to set hourly water reminders. Consistent sipping is better than chugging large amounts at once.' },
+      { icon: '🧪', title: 'Check Your Urine', desc: 'Pale yellow = well hydrated. Dark yellow = drink more water. Clear = you might be overhydrating.' }
+    ]
+  },
+  {
+    category: '😴 Recovery & Sleep Tips', tips: [
+      { icon: '🛏️', title: 'Consistent Sleep Schedule', desc: 'Go to bed and wake up at the same time every day, even on weekends. This regulates your body\'s internal clock.' },
+      { icon: '📵', title: 'No Screens Before Bed', desc: 'Blue light from phones and laptops suppresses melatonin production. Stop screen time 1 hour before sleep.' },
+      { icon: '🧘', title: 'Active Recovery Days', desc: 'Include light activities like walking, yoga, or stretching on rest days. This promotes blood flow and reduces soreness.' },
+      { icon: '🫖', title: 'Magnesium Before Bed', desc: 'Magnesium helps relax muscles and improve sleep quality. Try 200-400mg of magnesium glycinate before bedtime.' }
+    ]
+  }
+];
+
+// ===== MEAL PLAN DATA =====
+const MEAL_DB = {
+  breakfast: [
+    { name: 'Oatmeal with banana & honey', cals: 320, protein: 8 },
+    { name: 'Scrambled eggs (3) with toast', cals: 380, protein: 24 },
+    { name: 'Greek yogurt with granola & berries', cals: 290, protein: 18 },
+    { name: 'Protein pancakes (3)', cals: 350, protein: 28 },
+    { name: 'Avocado toast with 2 eggs', cals: 420, protein: 18 },
+    { name: 'Smoothie bowl (banana, protein, oats)', cals: 340, protein: 22 },
+    { name: 'Whole wheat bagel with cream cheese', cals: 310, protein: 10 },
+    { name: 'French toast (2 slices) with syrup', cals: 360, protein: 12 },
+    { name: 'Egg white omelette with vegetables', cals: 220, protein: 20 },
+    { name: 'Overnight oats with chia seeds', cals: 300, protein: 12 }
+  ],
+  snack: [
+    { name: 'Apple with 2 tbsp peanut butter', cals: 280, protein: 8 },
+    { name: 'Protein bar', cals: 220, protein: 20 },
+    { name: 'Greek yogurt (plain)', cals: 130, protein: 12 },
+    { name: 'Handful of almonds (1oz)', cals: 164, protein: 6 },
+    { name: 'Banana with protein shake', cals: 225, protein: 26 },
+    { name: 'Rice cakes with almond butter', cals: 180, protein: 5 },
+    { name: 'Cottage cheese with pineapple', cals: 160, protein: 14 },
+    { name: 'Trail mix (1/4 cup)', cals: 170, protein: 5 },
+    { name: 'Hard-boiled eggs (2)', cals: 156, protein: 12 },
+    { name: 'Hummus with carrot sticks', cals: 140, protein: 5 }
+  ],
+  lunch: [
+    { name: 'Grilled chicken salad with vinaigrette', cals: 400, protein: 35 },
+    { name: 'Turkey & avocado wrap', cals: 450, protein: 28 },
+    { name: 'Rice bowl with chicken & veggies', cals: 520, protein: 38 },
+    { name: 'Tuna sandwich on whole wheat', cals: 380, protein: 30 },
+    { name: 'Quinoa bowl with black beans & salsa', cals: 420, protein: 18 },
+    { name: 'Chicken stir-fry with rice', cals: 480, protein: 32 },
+    { name: 'Grilled salmon with sweet potato', cals: 460, protein: 34 },
+    { name: 'Beef burrito bowl', cals: 550, protein: 30 },
+    { name: 'Pasta with meat sauce', cals: 500, protein: 25 },
+    { name: 'Chicken Caesar wrap', cals: 430, protein: 30 }
+  ],
+  dinner: [
+    { name: 'Grilled steak with roasted potatoes & veggies', cals: 550, protein: 40 },
+    { name: 'Baked salmon with asparagus & rice', cals: 480, protein: 38 },
+    { name: 'Chicken breast with pasta & marinara', cals: 520, protein: 35 },
+    { name: 'Turkey meatballs with brown rice', cals: 460, protein: 32 },
+    { name: 'Shrimp stir-fry with noodles', cals: 440, protein: 28 },
+    { name: 'Lean beef stew with bread', cals: 500, protein: 30 },
+    { name: 'Baked chicken thighs with couscous', cals: 470, protein: 34 },
+    { name: 'Grilled fish tacos (3)', cals: 420, protein: 26 },
+    { name: 'Chicken & vegetable curry with rice', cals: 530, protein: 28 },
+    { name: 'Pork tenderloin with sweet potato mash', cals: 450, protein: 36 }
+  ]
+};
+
+// ===== EXERCISE PLAN DATA =====
+const EXERCISE_DB = {
+  weightloss: {
+    beginner: [
+      { day: 'Monday', label: 'Cardio + Core', exercises: [
+        { name: 'Brisk Walking', icon: '🚶', sets: '', reps: '30 min', cals: 150, muscle: 'Full Body' },
+        { name: 'Jumping Jacks', icon: '⭐', sets: '3', reps: '20', cals: 40, muscle: 'Full Body' },
+        { name: 'Bicycle Crunches', icon: '🔄', sets: '3', reps: '15', cals: 25, muscle: 'Core' },
+        { name: 'Plank Hold', icon: '🧘', sets: '3', reps: '30 sec', cals: 15, muscle: 'Core' }
+      ]},
+      { day: 'Tuesday', label: 'Rest Day', exercises: [
+        { name: 'Light Stretching', icon: '🧘', sets: '', reps: '15 min', cals: 30, muscle: 'Full Body' }
+      ]},
+      { day: 'Wednesday', label: 'Lower Body + Cardio', exercises: [
+        { name: 'Bodyweight Squats', icon: '🦵', sets: '3', reps: '15', cals: 35, muscle: 'Quads, Glutes' },
+        { name: 'Lunges', icon: '🚶', sets: '3', reps: '12 each', cals: 40, muscle: 'Legs' },
+        { name: 'Glute Bridges', icon: '🍑', sets: '3', reps: '15', cals: 20, muscle: 'Glutes' },
+        { name: 'Cycling', icon: '🚴', sets: '', reps: '20 min', cals: 160, muscle: 'Legs, Cardio' }
+      ]},
+      { day: 'Thursday', label: 'Rest Day', exercises: [
+        { name: 'Yoga Flow', icon: '🧘', sets: '', reps: '20 min', cals: 50, muscle: 'Full Body' }
+      ]},
+      { day: 'Friday', label: 'Upper Body + Cardio', exercises: [
+        { name: 'Push-ups (knee)', icon: '💪', sets: '3', reps: '10', cals: 25, muscle: 'Chest, Triceps' },
+        { name: 'Dumbbell Rows', icon: '🏋️', sets: '3', reps: '12', cals: 30, muscle: 'Back' },
+        { name: 'Overhead Press', icon: '🏋️', sets: '3', reps: '10', cals: 25, muscle: 'Shoulders' },
+        { name: 'Jump Rope', icon: '🤸', sets: '', reps: '15 min', cals: 150, muscle: 'Full Body' }
+      ]},
+      { day: 'Saturday', label: 'HIIT Day', exercises: [
+        { name: 'High Knees', icon: '🏃', sets: '4', reps: '30 sec on/30 off', cals: 50, muscle: 'Cardio' },
+        { name: 'Burpees', icon: '🤸', sets: '4', reps: '8', cals: 60, muscle: 'Full Body' },
+        { name: 'Mountain Climbers', icon: '⛰️', sets: '4', reps: '30 sec', cals: 45, muscle: 'Core, Cardio' },
+        { name: 'Squat Jumps', icon: '🦵', sets: '4', reps: '10', cals: 55, muscle: 'Legs' }
+      ]},
+      { day: 'Sunday', label: 'Rest & Recovery', exercises: [
+        { name: 'Walk in Nature', icon: '🌳', sets: '', reps: '30 min', cals: 100, muscle: 'Recovery' }
+      ]}
+    ],
+    intermediate: [
+      { day: 'Monday', label: 'HIIT + Core', exercises: [
+        { name: 'Running Intervals', icon: '🏃', sets: '8', reps: '30 sec sprint / 60 sec jog', cals: 300, muscle: 'Cardio' },
+        { name: 'Russian Twists', icon: '🔄', sets: '4', reps: '20', cals: 30, muscle: 'Obliques' },
+        { name: 'Leg Raises', icon: '🦵', sets: '4', reps: '15', cals: 25, muscle: 'Lower Abs' },
+        { name: 'Plank', icon: '🧘', sets: '3', reps: '60 sec', cals: 20, muscle: 'Core' }
+      ]},
+      { day: 'Tuesday', label: 'Strength - Upper', exercises: [
+        { name: 'Push-ups', icon: '💪', sets: '4', reps: '15', cals: 40, muscle: 'Chest' },
+        { name: 'Pull-ups / Assisted', icon: '💪', sets: '4', reps: '8', cals: 35, muscle: 'Back' },
+        { name: 'Dumbbell Shoulder Press', icon: '🏋️', sets: '4', reps: '12', cals: 40, muscle: 'Shoulders' },
+        { name: 'Tricep Dips', icon: '💪', sets: '3', reps: '12', cals: 30, muscle: 'Triceps' }
+      ]},
+      { day: 'Wednesday', label: 'Cardio', exercises: [
+        { name: 'Cycling', icon: '🚴', sets: '', reps: '40 min', cals: 350, muscle: 'Legs, Cardio' },
+        { name: 'Jump Rope', icon: '🤸', sets: '', reps: '10 min', cals: 120, muscle: 'Full Body' }
+      ]},
+      { day: 'Thursday', label: 'Strength - Lower', exercises: [
+        { name: 'Squats', icon: '🦵', sets: '4', reps: '15', cals: 50, muscle: 'Quads, Glutes' },
+        { name: 'Romanian Deadlifts', icon: '🏋️', sets: '4', reps: '12', cals: 45, muscle: 'Hamstrings' },
+        { name: 'Bulgarian Split Squats', icon: '🦵', sets: '3', reps: '10 each', cals: 40, muscle: 'Legs' },
+        { name: 'Calf Raises', icon: '🦵', sets: '3', reps: '20', cals: 20, muscle: 'Calves' }
+      ]},
+      { day: 'Friday', label: 'HIIT', exercises: [
+        { name: 'Burpees', icon: '🤸', sets: '5', reps: '10', cals: 80, muscle: 'Full Body' },
+        { name: 'Box Jumps', icon: '📦', sets: '4', reps: '12', cals: 60, muscle: 'Legs' },
+        { name: 'Battle Ropes', icon: '🪢', sets: '4', reps: '30 sec', cals: 50, muscle: 'Arms, Core' },
+        { name: 'Kettlebell Swings', icon: '🏋️', sets: '4', reps: '15', cals: 55, muscle: 'Full Body' }
+      ]},
+      { day: 'Saturday', label: 'Active Recovery', exercises: [
+        { name: 'Swimming', icon: '🏊', sets: '', reps: '30 min', cals: 250, muscle: 'Full Body' },
+        { name: 'Stretching', icon: '🧘', sets: '', reps: '15 min', cals: 30, muscle: 'Flexibility' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Rest Day', icon: '😴', sets: '', reps: 'Full Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ],
+    advanced: [
+      { day: 'Monday', label: 'HIIT + Abs', exercises: [
+        { name: 'Sprint Intervals', icon: '🏃', sets: '10', reps: '30 sec sprint / 30 sec rest', cals: 400, muscle: 'Cardio' },
+        { name: 'Hanging Leg Raises', icon: '🦵', sets: '4', reps: '15', cals: 35, muscle: 'Core' },
+        { name: 'Ab Wheel Rollouts', icon: '🔄', sets: '4', reps: '12', cals: 30, muscle: 'Core' },
+        { name: 'Dragon Flags', icon: '🐉', sets: '3', reps: '8', cals: 25, muscle: 'Core' }
+      ]},
+      { day: 'Tuesday', label: 'Heavy Upper', exercises: [
+        { name: 'Bench Press', icon: '🏋️', sets: '5', reps: '5', cals: 60, muscle: 'Chest' },
+        { name: 'Weighted Pull-ups', icon: '💪', sets: '5', reps: '5', cals: 55, muscle: 'Back' },
+        { name: 'OHP', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Shoulders' },
+        { name: 'Barbell Rows', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Back' }
+      ]},
+      { day: 'Wednesday', label: 'Plyo + Cardio', exercises: [
+        { name: 'Box Jumps', icon: '📦', sets: '5', reps: '10', cals: 70, muscle: 'Legs' },
+        { name: 'Rowing Machine', icon: '🚣', sets: '', reps: '20 min', cals: 250, muscle: 'Full Body' },
+        { name: 'Sled Push', icon: '🏋️', sets: '6', reps: '30 yards', cals: 80, muscle: 'Full Body' }
+      ]},
+      { day: 'Thursday', label: 'Heavy Lower', exercises: [
+        { name: 'Back Squats', icon: '🦵', sets: '5', reps: '5', cals: 70, muscle: 'Quads, Glutes' },
+        { name: 'Deadlifts', icon: '🏋️', sets: '5', reps: '5', cals: 75, muscle: 'Full Posterior' },
+        { name: 'Front Squats', icon: '🦵', sets: '4', reps: '8', cals: 55, muscle: 'Quads' },
+        { name: 'Glute Ham Raises', icon: '🍑', sets: '3', reps: '10', cals: 30, muscle: 'Hamstrings' }
+      ]},
+      { day: 'Friday', label: 'MetCon', exercises: [
+        { name: 'Thrusters', icon: '🏋️', sets: '5', reps: '12', cals: 65, muscle: 'Full Body' },
+        { name: 'Toes-to-Bar', icon: '🦵', sets: '4', reps: '12', cals: 35, muscle: 'Core' },
+        { name: 'Assault Bike', icon: '🚴', sets: '', reps: '15 min intervals', cals: 250, muscle: 'Cardio' },
+        { name: 'Farmer Carries', icon: '🏋️', sets: '4', reps: '40 yards', cals: 40, muscle: 'Grip, Core' }
+      ]},
+      { day: 'Saturday', label: 'Active Recovery', exercises: [
+        { name: 'Long Jog', icon: '🏃', sets: '', reps: '45 min', cals: 350, muscle: 'Cardio' },
+        { name: 'Mobility Work', icon: '🧘', sets: '', reps: '20 min', cals: 40, muscle: 'Flexibility' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Rest & Recover', icon: '😴', sets: '', reps: 'Full Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ]
+  },
+  muscle: {
+    beginner: [
+      { day: 'Monday', label: 'Push (Chest/Tris/Shoulders)', exercises: [
+        { name: 'Push-ups', icon: '💪', sets: '3', reps: '12', cals: 30, muscle: 'Chest' },
+        { name: 'Dumbbell Bench Press', icon: '🏋️', sets: '3', reps: '10', cals: 35, muscle: 'Chest' },
+        { name: 'Overhead Press', icon: '🏋️', sets: '3', reps: '10', cals: 30, muscle: 'Shoulders' },
+        { name: 'Tricep Pushdowns', icon: '💪', sets: '3', reps: '12', cals: 20, muscle: 'Triceps' }
+      ]},
+      { day: 'Tuesday', label: 'Pull (Back/Biceps)', exercises: [
+        { name: 'Lat Pulldowns', icon: '💪', sets: '3', reps: '10', cals: 30, muscle: 'Back' },
+        { name: 'Dumbbell Rows', icon: '🏋️', sets: '3', reps: '10 each', cals: 30, muscle: 'Back' },
+        { name: 'Face Pulls', icon: '🏋️', sets: '3', reps: '15', cals: 20, muscle: 'Rear Delts' },
+        { name: 'Bicep Curls', icon: '💪', sets: '3', reps: '12', cals: 20, muscle: 'Biceps' }
+      ]},
+      { day: 'Wednesday', label: 'Rest', exercises: [
+        { name: 'Light Cardio', icon: '🚶', sets: '', reps: '20 min walk', cals: 80, muscle: 'Recovery' }
+      ]},
+      { day: 'Thursday', label: 'Legs', exercises: [
+        { name: 'Goblet Squats', icon: '🦵', sets: '3', reps: '12', cals: 40, muscle: 'Quads' },
+        { name: 'Leg Press', icon: '🦵', sets: '3', reps: '12', cals: 40, muscle: 'Quads, Glutes' },
+        { name: 'Leg Curls', icon: '🦵', sets: '3', reps: '12', cals: 25, muscle: 'Hamstrings' },
+        { name: 'Calf Raises', icon: '🦵', sets: '3', reps: '15', cals: 15, muscle: 'Calves' }
+      ]},
+      { day: 'Friday', label: 'Full Body', exercises: [
+        { name: 'Dumbbell Deadlift', icon: '🏋️', sets: '3', reps: '10', cals: 40, muscle: 'Full Body' },
+        { name: 'Incline DB Press', icon: '🏋️', sets: '3', reps: '10', cals: 30, muscle: 'Upper Chest' },
+        { name: 'Cable Rows', icon: '🏋️', sets: '3', reps: '12', cals: 30, muscle: 'Back' },
+        { name: 'Lateral Raises', icon: '🏋️', sets: '3', reps: '12', cals: 15, muscle: 'Shoulders' }
+      ]},
+      { day: 'Saturday', label: 'Active Recovery', exercises: [
+        { name: 'Stretching', icon: '🧘', sets: '', reps: '20 min', cals: 40, muscle: 'Flexibility' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Full Rest', icon: '😴', sets: '', reps: 'Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ],
+    intermediate: [
+      { day: 'Monday', label: 'Chest & Triceps', exercises: [
+        { name: 'Barbell Bench Press', icon: '🏋️', sets: '4', reps: '8', cals: 50, muscle: 'Chest' },
+        { name: 'Incline DB Press', icon: '🏋️', sets: '4', reps: '10', cals: 40, muscle: 'Upper Chest' },
+        { name: 'Cable Flyes', icon: '🏋️', sets: '3', reps: '12', cals: 25, muscle: 'Chest' },
+        { name: 'Close-Grip Bench', icon: '🏋️', sets: '3', reps: '10', cals: 35, muscle: 'Triceps' },
+        { name: 'Overhead Tricep Extension', icon: '💪', sets: '3', reps: '12', cals: 20, muscle: 'Triceps' }
+      ]},
+      { day: 'Tuesday', label: 'Back & Biceps', exercises: [
+        { name: 'Barbell Rows', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Back' },
+        { name: 'Pull-ups', icon: '💪', sets: '4', reps: '8-10', cals: 40, muscle: 'Lats' },
+        { name: 'Seated Cable Row', icon: '🏋️', sets: '3', reps: '12', cals: 30, muscle: 'Mid Back' },
+        { name: 'Barbell Curls', icon: '💪', sets: '3', reps: '10', cals: 25, muscle: 'Biceps' },
+        { name: 'Hammer Curls', icon: '💪', sets: '3', reps: '12', cals: 20, muscle: 'Biceps' }
+      ]},
+      { day: 'Wednesday', label: 'Legs', exercises: [
+        { name: 'Back Squats', icon: '🦵', sets: '4', reps: '8', cals: 60, muscle: 'Quads, Glutes' },
+        { name: 'Romanian Deadlifts', icon: '🏋️', sets: '4', reps: '10', cals: 50, muscle: 'Hamstrings' },
+        { name: 'Leg Press', icon: '🦵', sets: '3', reps: '12', cals: 40, muscle: 'Quads' },
+        { name: 'Walking Lunges', icon: '🚶', sets: '3', reps: '12 each', cals: 40, muscle: 'Legs' },
+        { name: 'Calf Raises', icon: '🦵', sets: '4', reps: '15', cals: 20, muscle: 'Calves' }
+      ]},
+      { day: 'Thursday', label: 'Shoulders & Abs', exercises: [
+        { name: 'OHP', icon: '🏋️', sets: '4', reps: '8', cals: 40, muscle: 'Shoulders' },
+        { name: 'Lateral Raises', icon: '🏋️', sets: '4', reps: '12', cals: 25, muscle: 'Side Delts' },
+        { name: 'Face Pulls', icon: '🏋️', sets: '3', reps: '15', cals: 20, muscle: 'Rear Delts' },
+        { name: 'Hanging Leg Raises', icon: '🦵', sets: '3', reps: '12', cals: 25, muscle: 'Core' },
+        { name: 'Cable Crunches', icon: '🔄', sets: '3', reps: '15', cals: 20, muscle: 'Abs' }
+      ]},
+      { day: 'Friday', label: 'Upper Power', exercises: [
+        { name: 'Weighted Dips', icon: '💪', sets: '4', reps: '8', cals: 45, muscle: 'Chest, Tris' },
+        { name: 'Weighted Chin-ups', icon: '💪', sets: '4', reps: '6', cals: 40, muscle: 'Back, Bis' },
+        { name: 'Arnold Press', icon: '🏋️', sets: '3', reps: '10', cals: 30, muscle: 'Shoulders' },
+        { name: 'Skull Crushers', icon: '💪', sets: '3', reps: '10', cals: 25, muscle: 'Triceps' }
+      ]},
+      { day: 'Saturday', label: 'Lower Power', exercises: [
+        { name: 'Front Squats', icon: '🦵', sets: '4', reps: '6', cals: 55, muscle: 'Quads' },
+        { name: 'Sumo Deadlifts', icon: '🏋️', sets: '4', reps: '6', cals: 60, muscle: 'Full Legs' },
+        { name: 'Hip Thrusts', icon: '🍑', sets: '3', reps: '12', cals: 35, muscle: 'Glutes' },
+        { name: 'Leg Extensions', icon: '🦵', sets: '3', reps: '15', cals: 25, muscle: 'Quads' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Full Rest', icon: '😴', sets: '', reps: 'Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ],
+    advanced: [
+      { day: 'Monday', label: 'Chest & Back', exercises: [
+        { name: 'Bench Press', icon: '🏋️', sets: '5', reps: '5', cals: 60, muscle: 'Chest' },
+        { name: 'Weighted Pull-ups', icon: '💪', sets: '5', reps: '5', cals: 55, muscle: 'Back' },
+        { name: 'Incline Barbell Press', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Upper Chest' },
+        { name: 'T-Bar Rows', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Back' },
+        { name: 'Dips (weighted)', icon: '💪', sets: '3', reps: '10', cals: 40, muscle: 'Chest, Tris' }
+      ]},
+      { day: 'Tuesday', label: 'Legs - Heavy', exercises: [
+        { name: 'Back Squats', icon: '🦵', sets: '5', reps: '5', cals: 70, muscle: 'Quads, Glutes' },
+        { name: 'Deadlifts', icon: '🏋️', sets: '5', reps: '3', cals: 80, muscle: 'Full Posterior' },
+        { name: 'Walking Lunges', icon: '🚶', sets: '4', reps: '12 each', cals: 50, muscle: 'Legs' },
+        { name: 'Leg Press', icon: '🦵', sets: '4', reps: '12', cals: 45, muscle: 'Quads' },
+        { name: 'Standing Calf Raises', icon: '🦵', sets: '5', reps: '15', cals: 25, muscle: 'Calves' }
+      ]},
+      { day: 'Wednesday', label: 'Shoulders & Arms', exercises: [
+        { name: 'Military Press', icon: '🏋️', sets: '5', reps: '5', cals: 50, muscle: 'Shoulders' },
+        { name: 'Barbell Curls', icon: '💪', sets: '4', reps: '10', cals: 30, muscle: 'Biceps' },
+        { name: 'Skull Crushers', icon: '💪', sets: '4', reps: '10', cals: 30, muscle: 'Triceps' },
+        { name: 'Lateral Raises', icon: '🏋️', sets: '4', reps: '12', cals: 25, muscle: 'Side Delts' },
+        { name: 'Preacher Curls', icon: '💪', sets: '3', reps: '12', cals: 25, muscle: 'Biceps' }
+      ]},
+      { day: 'Thursday', label: 'Rest & Recovery', exercises: [
+        { name: 'Foam Rolling', icon: '🧘', sets: '', reps: '20 min', cals: 30, muscle: 'Recovery' },
+        { name: 'Light Cardio', icon: '🚶', sets: '', reps: '20 min walk', cals: 80, muscle: 'Recovery' }
+      ]},
+      { day: 'Friday', label: 'Chest, Back & Arms', exercises: [
+        { name: 'Incline DB Press', icon: '🏋️', sets: '4', reps: '10', cals: 40, muscle: 'Upper Chest' },
+        { name: 'Barbell Rows', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Back' },
+        { name: 'Cable Crossovers', icon: '🏋️', sets: '3', reps: '12', cals: 25, muscle: 'Chest' },
+        { name: 'Hammer Curls', icon: '💪', sets: '3', reps: '12', cals: 25, muscle: 'Biceps' },
+        { name: 'Rope Pushdowns', icon: '💪', sets: '3', reps: '15', cals: 20, muscle: 'Triceps' }
+      ]},
+      { day: 'Saturday', label: 'Legs - Volume', exercises: [
+        { name: 'Front Squats', icon: '🦵', sets: '4', reps: '8', cals: 55, muscle: 'Quads' },
+        { name: 'Romanian Deadlifts', icon: '🏋️', sets: '4', reps: '10', cals: 50, muscle: 'Hamstrings' },
+        { name: 'Hip Thrusts', icon: '🍑', sets: '4', reps: '12', cals: 40, muscle: 'Glutes' },
+        { name: 'Leg Extensions', icon: '🦵', sets: '3', reps: '15', cals: 25, muscle: 'Quads' },
+        { name: 'Leg Curls', icon: '🦵', sets: '3', reps: '12', cals: 25, muscle: 'Hamstrings' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Full Rest', icon: '😴', sets: '', reps: 'Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ]
+  },
+  fitness: {
+    beginner: [
+      { day: 'Monday', label: 'Full Body', exercises: [
+        { name: 'Bodyweight Squats', icon: '🦵', sets: '3', reps: '12', cals: 30, muscle: 'Legs' },
+        { name: 'Push-ups (knee)', icon: '💪', sets: '3', reps: '8', cals: 20, muscle: 'Chest' },
+        { name: 'Dumbbell Rows', icon: '🏋️', sets: '3', reps: '10', cals: 25, muscle: 'Back' },
+        { name: 'Plank Hold', icon: '🧘', sets: '3', reps: '20 sec', cals: 10, muscle: 'Core' }
+      ]},
+      { day: 'Tuesday', label: 'Cardio', exercises: [
+        { name: 'Brisk Walk', icon: '🚶', sets: '', reps: '30 min', cals: 150, muscle: 'Cardio' },
+        { name: 'Stretching', icon: '🧘', sets: '', reps: '10 min', cals: 20, muscle: 'Flexibility' }
+      ]},
+      { day: 'Wednesday', label: 'Full Body', exercises: [
+        { name: 'Lunges', icon: '🚶', sets: '3', reps: '10 each', cals: 35, muscle: 'Legs' },
+        { name: 'Dumbbell Press', icon: '🏋️', sets: '3', reps: '10', cals: 30, muscle: 'Chest' },
+        { name: 'Lat Pulldowns', icon: '💪', sets: '3', reps: '10', cals: 25, muscle: 'Back' },
+        { name: 'Crunches', icon: '🔄', sets: '3', reps: '15', cals: 15, muscle: 'Core' }
+      ]},
+      { day: 'Thursday', label: 'Rest', exercises: [
+        { name: 'Yoga', icon: '🧘', sets: '', reps: '20 min', cals: 50, muscle: 'Flexibility' }
+      ]},
+      { day: 'Friday', label: 'Full Body', exercises: [
+        { name: 'Deadlift (light)', icon: '🏋️', sets: '3', reps: '10', cals: 35, muscle: 'Posterior' },
+        { name: 'Shoulder Press', icon: '🏋️', sets: '3', reps: '10', cals: 25, muscle: 'Shoulders' },
+        { name: 'Glute Bridges', icon: '🍑', sets: '3', reps: '15', cals: 20, muscle: 'Glutes' },
+        { name: 'Bird Dogs', icon: '🐕', sets: '3', reps: '10 each', cals: 15, muscle: 'Core' }
+      ]},
+      { day: 'Saturday', label: 'Cardio Fun', exercises: [
+        { name: 'Swimming / Cycling / Hiking', icon: '🏊', sets: '', reps: '30-45 min', cals: 250, muscle: 'Full Body' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Full Rest', icon: '😴', sets: '', reps: 'Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ],
+    intermediate: [
+      { day: 'Monday', label: 'Upper Body', exercises: [
+        { name: 'Bench Press', icon: '🏋️', sets: '4', reps: '10', cals: 45, muscle: 'Chest' },
+        { name: 'Barbell Rows', icon: '🏋️', sets: '4', reps: '10', cals: 40, muscle: 'Back' },
+        { name: 'OHP', icon: '🏋️', sets: '3', reps: '10', cals: 30, muscle: 'Shoulders' },
+        { name: 'Bicep Curls', icon: '💪', sets: '3', reps: '12', cals: 20, muscle: 'Biceps' }
+      ]},
+      { day: 'Tuesday', label: 'Lower Body', exercises: [
+        { name: 'Squats', icon: '🦵', sets: '4', reps: '10', cals: 50, muscle: 'Legs' },
+        { name: 'Deadlifts', icon: '🏋️', sets: '4', reps: '8', cals: 55, muscle: 'Posterior' },
+        { name: 'Leg Press', icon: '🦵', sets: '3', reps: '12', cals: 35, muscle: 'Quads' },
+        { name: 'Calf Raises', icon: '🦵', sets: '3', reps: '15', cals: 15, muscle: 'Calves' }
+      ]},
+      { day: 'Wednesday', label: 'Cardio & Core', exercises: [
+        { name: 'Running', icon: '🏃', sets: '', reps: '30 min', cals: 300, muscle: 'Cardio' },
+        { name: 'Plank', icon: '🧘', sets: '3', reps: '60 sec', cals: 20, muscle: 'Core' },
+        { name: 'Russian Twists', icon: '🔄', sets: '3', reps: '20', cals: 25, muscle: 'Obliques' }
+      ]},
+      { day: 'Thursday', label: 'Upper Body', exercises: [
+        { name: 'Pull-ups', icon: '💪', sets: '4', reps: '8', cals: 35, muscle: 'Back' },
+        { name: 'Incline DB Press', icon: '🏋️', sets: '4', reps: '10', cals: 40, muscle: 'Upper Chest' },
+        { name: 'Lateral Raises', icon: '🏋️', sets: '3', reps: '12', cals: 20, muscle: 'Shoulders' },
+        { name: 'Tricep Dips', icon: '💪', sets: '3', reps: '12', cals: 25, muscle: 'Triceps' }
+      ]},
+      { day: 'Friday', label: 'Lower Body & HIIT', exercises: [
+        { name: 'Front Squats', icon: '🦵', sets: '4', reps: '8', cals: 50, muscle: 'Quads' },
+        { name: 'Hip Thrusts', icon: '🍑', sets: '3', reps: '12', cals: 30, muscle: 'Glutes' },
+        { name: 'HIIT Circuit', icon: '🔥', sets: '4', reps: '4 min Tabata', cals: 120, muscle: 'Cardio' }
+      ]},
+      { day: 'Saturday', label: 'Active Fun', exercises: [
+        { name: 'Sport / Outdoor Activity', icon: '⚽', sets: '', reps: '60 min', cals: 350, muscle: 'Full Body' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Rest & Stretch', icon: '😴', sets: '', reps: 'Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ],
+    advanced: [
+      { day: 'Monday', label: 'Push', exercises: [
+        { name: 'Bench Press', icon: '🏋️', sets: '5', reps: '5', cals: 60, muscle: 'Chest' },
+        { name: 'OHP', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Shoulders' },
+        { name: 'Incline DB Press', icon: '🏋️', sets: '4', reps: '10', cals: 40, muscle: 'Chest' },
+        { name: 'Dips', icon: '💪', sets: '3', reps: '12', cals: 35, muscle: 'Chest, Tris' },
+        { name: 'Lateral Raises', icon: '🏋️', sets: '4', reps: '15', cals: 25, muscle: 'Shoulders' }
+      ]},
+      { day: 'Tuesday', label: 'Pull', exercises: [
+        { name: 'Deadlifts', icon: '🏋️', sets: '5', reps: '3', cals: 80, muscle: 'Full Posterior' },
+        { name: 'Weighted Pull-ups', icon: '💪', sets: '4', reps: '6', cals: 50, muscle: 'Back' },
+        { name: 'Barbell Rows', icon: '🏋️', sets: '4', reps: '8', cals: 45, muscle: 'Back' },
+        { name: 'Face Pulls', icon: '🏋️', sets: '3', reps: '15', cals: 20, muscle: 'Rear Delts' },
+        { name: 'Barbell Curls', icon: '💪', sets: '3', reps: '10', cals: 25, muscle: 'Biceps' }
+      ]},
+      { day: 'Wednesday', label: 'Legs + Cardio', exercises: [
+        { name: 'Back Squats', icon: '🦵', sets: '5', reps: '5', cals: 70, muscle: 'Quads' },
+        { name: 'Romanian Deadlifts', icon: '🏋️', sets: '4', reps: '10', cals: 50, muscle: 'Hamstrings' },
+        { name: 'Leg Press', icon: '🦵', sets: '3', reps: '15', cals: 40, muscle: 'Quads' },
+        { name: 'Running', icon: '🏃', sets: '', reps: '20 min', cals: 200, muscle: 'Cardio' }
+      ]},
+      { day: 'Thursday', label: 'Active Recovery', exercises: [
+        { name: 'Swimming or Yoga', icon: '🏊', sets: '', reps: '40 min', cals: 200, muscle: 'Recovery' }
+      ]},
+      { day: 'Friday', label: 'Full Body Power', exercises: [
+        { name: 'Clean & Press', icon: '🏋️', sets: '5', reps: '3', cals: 60, muscle: 'Full Body' },
+        { name: 'Front Squats', icon: '🦵', sets: '4', reps: '6', cals: 50, muscle: 'Quads' },
+        { name: 'Weighted Chin-ups', icon: '💪', sets: '4', reps: '6', cals: 45, muscle: 'Back' },
+        { name: 'Push Press', icon: '🏋️', sets: '3', reps: '8', cals: 40, muscle: 'Shoulders' }
+      ]},
+      { day: 'Saturday', label: 'Conditioning', exercises: [
+        { name: 'HIIT Circuit', icon: '🔥', sets: '5 rounds', reps: '5 exercises × 45 sec', cals: 350, muscle: 'Full Body' },
+        { name: 'Farmer Walks', icon: '🏋️', sets: '4', reps: '40 yards', cals: 40, muscle: 'Grip, Core' }
+      ]},
+      { day: 'Sunday', label: 'Rest', exercises: [
+        { name: 'Full Rest', icon: '😴', sets: '', reps: 'Rest', cals: 0, muscle: 'Recovery' }
+      ]}
+    ]
+  }
+};
+
+// ===== APP STATE =====
+let currentPage = 'dashboard';
+let currentMealType = 'breakfast';
+let calculatedGoal = null;
+let currentMealPlan = null;
+
+// ===== HELPERS =====
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getProfile() {
+  return JSON.parse(localStorage.getItem('ct_profile') || '{"goalCalories":2000}');
+}
+
+function saveProfile(p) {
+  localStorage.setItem('ct_profile', JSON.stringify(p));
+}
+
+function getFoodLogs(date) {
+  const all = JSON.parse(localStorage.getItem('ct_food_logs') || '{}');
+  return all[date] || { breakfast: [], lunch: [], dinner: [], snacks: [] };
+}
+
+function saveFoodLogs(date, logs) {
+  const all = JSON.parse(localStorage.getItem('ct_food_logs') || '{}');
+  all[date] = logs;
+  localStorage.setItem('ct_food_logs', JSON.stringify(all));
+}
+
+function showToast(message, type = 'success') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.innerHTML = `${type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '❌'} ${message}`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+function showConfetti() {
+  const c = document.createElement('div');
+  c.className = 'confetti-container';
+  const colors = ['#00d4aa', '#4fc3f7', '#ff6b9d', '#ffab40', '#69f0ae', '#ff5252'];
+  for (let i = 0; i < 50; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDelay = Math.random() * 1 + 's';
+    p.style.animationDuration = (2 + Math.random() * 2) + 's';
+    p.style.width = (6 + Math.random() * 8) + 'px';
+    p.style.height = (6 + Math.random() * 8) + 'px';
+    c.appendChild(p);
+  }
+  document.body.appendChild(c);
+  setTimeout(() => c.remove(), 4000);
+}
+
+// ===== NAVIGATION =====
+function navigateTo(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  document.querySelectorAll('.bottom-nav-item').forEach(n => n.classList.toggle('active', n.dataset.page === page));
+  if (page === 'dashboard') refreshDashboard();
+  if (page === 'logger') refreshLogger();
+}
+
+document.querySelectorAll('.nav-item, .bottom-nav-item').forEach(item => {
+  item.addEventListener('click', () => navigateTo(item.dataset.page));
+});
+
+// ===== DASHBOARD =====
+function refreshDashboard() {
+  const profile = getProfile();
+  const goal = profile.goalCalories || 2000;
+  const today = getToday();
+  const logs = getFoodLogs(today);
+
+  // Greeting
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? 'Good Morning! 🌅' : hour < 17 ? 'Good Afternoon! ☀️' : 'Good Evening! 🌙';
+  document.getElementById('greeting-text').textContent = greet;
+
+  // Calculate totals
+  let totalCals = 0, totalP = 0, totalC = 0, totalF = 0;
+  const mealTotals = {};
+  ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(meal => {
+    let mc = 0;
+    (logs[meal] || []).forEach(f => {
+      totalCals += f.cals || 0;
+      totalP += f.protein || 0;
+      totalC += f.carbs || 0;
+      totalF += f.fat || 0;
+      mc += f.cals || 0;
+    });
+    mealTotals[meal] = mc;
+  });
+
+  document.getElementById('dash-consumed').textContent = totalCals;
+  document.getElementById('dash-remaining').textContent = Math.max(0, goal - totalCals);
+  document.getElementById('dash-goal').textContent = goal;
+
+  // Progress ring
+  const pct = Math.min(100, (totalCals / goal) * 100);
+  const circumference = 2 * Math.PI * 85;
+  const offset = circumference - (pct / 100) * circumference;
+  document.getElementById('progress-ring').style.strokeDashoffset = offset;
+  document.getElementById('ring-percent').textContent = Math.round(pct) + '%';
+
+  // Macros
+  const pGoal = profile.proteinGoal || 150, cGoal = profile.carbsGoal || 250, fGoal = profile.fatGoal || 65;
+  document.getElementById('macro-protein').style.width = Math.min(100, (totalP / pGoal) * 100) + '%';
+  document.getElementById('macro-carbs').style.width = Math.min(100, (totalC / cGoal) * 100) + '%';
+  document.getElementById('macro-fat').style.width = Math.min(100, (totalF / fGoal) * 100) + '%';
+  document.getElementById('macro-protein-val').textContent = totalP + 'g / ' + pGoal + 'g';
+  document.getElementById('macro-carbs-val').textContent = totalC + 'g / ' + cGoal + 'g';
+  document.getElementById('macro-fat-val').textContent = totalF + 'g / ' + fGoal + 'g';
+
+  // Meal summary
+  document.getElementById('dash-breakfast').textContent = mealTotals.breakfast + ' cal';
+  document.getElementById('dash-lunch').textContent = mealTotals.lunch + ' cal';
+  document.getElementById('dash-dinner').textContent = mealTotals.dinner + ' cal';
+  document.getElementById('dash-snacks').textContent = mealTotals.snacks + ' cal';
+
+  // Weekly chart
+  renderWeeklyChart();
+
+  // Check goal met
+  if (totalCals >= goal && totalCals > 0) {
+    const key = 'ct_confetti_' + today;
+    if (!localStorage.getItem(key)) {
+      showConfetti();
+      showToast('🎉 Daily calorie goal reached!', 'success');
+      localStorage.setItem(key, '1');
+    }
+  }
+}
+
+function renderWeeklyChart() {
+  const chart = document.getElementById('weekly-chart');
+  chart.innerHTML = '';
+  const profile = getProfile();
+  const goal = profile.goalCalories || 2000;
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const allLogs = JSON.parse(localStorage.getItem('ct_food_logs') || '{}');
+
+  let weekData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split('T')[0];
+    const logs = allLogs[key] || { breakfast: [], lunch: [], dinner: [], snacks: [] };
+    let total = 0;
+    ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(m => {
+      (logs[m] || []).forEach(f => total += f.cals || 0);
+    });
+    weekData.push({ day: days[d.getDay()], cals: total });
+  }
+
+  const maxCal = Math.max(goal, ...weekData.map(d => d.cals), 1);
+  weekData.forEach(d => {
+    const h = Math.max(4, (d.cals / maxCal) * 140);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'chart-bar-wrapper';
+    wrapper.innerHTML = `
+      <div class="chart-bar" style="height:${h}px">
+        <span class="chart-bar-val">${d.cals}</span>
+      </div>
+      <span class="chart-bar-label">${d.day}</span>`;
+    chart.appendChild(wrapper);
+  });
+}
+
+// ===== CALCULATOR =====
+function calculateCalories() {
+  const age = parseInt(document.getElementById('calc-age').value);
+  const gender = document.getElementById('calc-gender').value;
+  const height = parseFloat(document.getElementById('calc-height').value);
+  const weight = parseFloat(document.getElementById('calc-weight').value);
+  const activity = parseFloat(document.getElementById('calc-activity').value);
+  const goalAdj = parseInt(document.getElementById('calc-goal').value);
+
+  if (!age || !height || !weight) {
+    showToast('Please fill in all fields', 'error');
+    return;
+  }
+
+  // Mifflin-St Jeor
+  let bmr;
+  if (gender === 'male') {
+    bmr = 10 * weight + 6.25 * height - 5 * age + 5;
+  } else {
+    bmr = 10 * weight + 6.25 * height - 5 * age - 161;
+  }
+
+  const tdee = Math.round(bmr * activity);
+  const dailyGoal = Math.round(tdee + goalAdj);
+  const bmi = (weight / ((height / 100) ** 2)).toFixed(1);
+  const idealLow = Math.round(18.5 * ((height / 100) ** 2));
+  const idealHigh = Math.round(24.9 * ((height / 100) ** 2));
+  const weeklyChange = Math.abs(goalAdj) > 0 ? ((goalAdj / 7700) * 7).toFixed(2) : '0';
+
+  // Macros (40% carbs, 30% protein, 30% fat)
+  const proteinG = Math.round((dailyGoal * 0.30) / 4);
+  const carbsG = Math.round((dailyGoal * 0.40) / 4);
+  const fatG = Math.round((dailyGoal * 0.30) / 9);
+
+  calculatedGoal = { bmr: Math.round(bmr), tdee, dailyGoal, bmi, idealLow, idealHigh, weeklyChange, proteinG, carbsG, fatG, age, gender, height, weight, activity };
+
+  const results = document.getElementById('calc-results');
+  results.style.display = 'grid';
+  results.innerHTML = `
+    <div class="result-card"><div class="result-val">${Math.round(bmr)}</div><div class="result-label">BMR (cal/day)</div></div>
+    <div class="result-card"><div class="result-val">${tdee}</div><div class="result-label">TDEE (cal/day)</div></div>
+    <div class="result-card"><div class="result-val" style="color:var(--accent2)">${dailyGoal}</div><div class="result-label">Daily Goal</div></div>
+    <div class="result-card"><div class="result-val">${bmi}</div><div class="result-label">BMI</div></div>
+    <div class="result-card"><div class="result-val">${idealLow}-${idealHigh}</div><div class="result-label">Ideal Weight (kg)</div></div>
+    <div class="result-card"><div class="result-val">${goalAdj > 0 ? '+' : ''}${weeklyChange} kg</div><div class="result-label">Est. Weekly Change</div></div>
+    <div class="result-card"><div class="result-val" style="color:#ff6b9d">${proteinG}g</div><div class="result-label">Protein / day</div></div>
+    <div class="result-card"><div class="result-val" style="color:var(--accent)">${carbsG}g</div><div class="result-label">Carbs / day</div></div>
+    <div class="result-card"><div class="result-val" style="color:var(--warning)">${fatG}g</div><div class="result-label">Fat / day</div></div>
+  `;
+  document.getElementById('save-goal-btn').style.display = 'inline-block';
+}
+
+function saveGoal() {
+  if (!calculatedGoal) return;
+  const profile = getProfile();
+  profile.goalCalories = calculatedGoal.dailyGoal;
+  profile.proteinGoal = calculatedGoal.proteinG;
+  profile.carbsGoal = calculatedGoal.carbsG;
+  profile.fatGoal = calculatedGoal.fatG;
+  profile.age = calculatedGoal.age;
+  profile.gender = calculatedGoal.gender;
+  profile.height = calculatedGoal.height;
+  profile.weight = calculatedGoal.weight;
+  profile.activity = calculatedGoal.activity;
+  saveProfile(profile);
+  showToast('Daily goal set to ' + calculatedGoal.dailyGoal + ' calories!');
+
+  // Update meal plan calories selector
+  const planCals = document.getElementById('plan-calories');
+  const closest = [1500, 1800, 2000, 2200, 2500, 2800, 3000].reduce((prev, curr) =>
+    Math.abs(curr - calculatedGoal.dailyGoal) < Math.abs(prev - calculatedGoal.dailyGoal) ? curr : prev
+  );
+  planCals.value = closest;
+}
+
+// ===== FOOD LOGGER =====
+function refreshLogger() {
+  const date = document.getElementById('logger-date').value || getToday();
+  const logs = getFoodLogs(date);
+  let grandTotal = 0;
+
+  ['breakfast', 'lunch', 'dinner', 'snacks'].forEach(meal => {
+    const list = document.getElementById('list-' + meal);
+    const total = document.getElementById('total-' + meal);
+    list.innerHTML = '';
+    let mealTotal = 0;
+
+    (logs[meal] || []).forEach((food, idx) => {
+      mealTotal += food.cals || 0;
+      const div = document.createElement('div');
+      div.className = 'food-item';
+      div.innerHTML = `
+        <span class="food-name">${food.name}</span>
+        <span class="food-cals">
+          ${food.cals} cal
+          <span class="delete-food" onclick="deleteFood('${meal}', ${idx})">✕</span>
+        </span>`;
+      list.appendChild(div);
+    });
+
+    total.textContent = mealTotal + ' cal';
+    grandTotal += mealTotal;
+  });
+
+  document.getElementById('logger-total').textContent = grandTotal;
+}
+
+function openFoodModal(mealType) {
+  currentMealType = mealType;
+  const names = { breakfast: '🌅 Breakfast', lunch: '☀️ Lunch', dinner: '🌙 Dinner', snacks: '🍪 Snacks' };
+  document.getElementById('modal-title').textContent = 'Add Food — ' + names[mealType];
+  document.getElementById('modal-food-name').value = '';
+  document.getElementById('modal-food-cals').value = '';
+  document.getElementById('modal-food-protein').value = '';
+  document.getElementById('modal-food-carbs').value = '';
+  document.getElementById('modal-food-fat').value = '';
+
+  // Render quick foods
+  const qf = document.getElementById('quick-foods');
+  qf.innerHTML = '';
+  COMMON_FOODS.forEach(f => {
+    const btn = document.createElement('div');
+    btn.className = 'quick-food';
+    btn.textContent = `${f.name} (${f.cals})`;
+    btn.addEventListener('click', () => {
+      document.getElementById('modal-food-name').value = f.name;
+      document.getElementById('modal-food-cals').value = f.cals;
+      document.getElementById('modal-food-protein').value = f.protein;
+      document.getElementById('modal-food-carbs').value = f.carbs;
+      document.getElementById('modal-food-fat').value = f.fat;
+      qf.querySelectorAll('.quick-food').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    qf.appendChild(btn);
+  });
+
+  document.getElementById('food-modal').classList.add('show');
+}
+
+function closeFoodModal() {
+  document.getElementById('food-modal').classList.remove('show');
+}
+
+function addFoodFromModal() {
+  const name = document.getElementById('modal-food-name').value.trim();
+  const cals = parseInt(document.getElementById('modal-food-cals').value) || 0;
+  const protein = parseInt(document.getElementById('modal-food-protein').value) || 0;
+  const carbs = parseInt(document.getElementById('modal-food-carbs').value) || 0;
+  const fat = parseInt(document.getElementById('modal-food-fat').value) || 0;
+
+  if (!name || cals <= 0) {
+    showToast('Please enter a food name and calories', 'error');
+    return;
+  }
+
+  const date = document.getElementById('logger-date').value || getToday();
+  const logs = getFoodLogs(date);
+  if (!logs[currentMealType]) logs[currentMealType] = [];
+  logs[currentMealType].push({ name, cals, protein, carbs, fat });
+  saveFoodLogs(date, logs);
+  closeFoodModal();
+  refreshLogger();
+  showToast(`${name} added (${cals} cal)`);
+}
+
+function deleteFood(meal, idx) {
+  const date = document.getElementById('logger-date').value || getToday();
+  const logs = getFoodLogs(date);
+  logs[meal].splice(idx, 1);
+  saveFoodLogs(date, logs);
+  refreshLogger();
+  showToast('Food removed');
+}
+
+// Date change
+document.getElementById('logger-date').addEventListener('change', refreshLogger);
+
+// Close modal on overlay click
+document.getElementById('food-modal').addEventListener('click', function (e) {
+  if (e.target === this) closeFoodModal();
+});
+
+// ===== TIPS =====
+function renderTips() {
+  const container = document.getElementById('tips-container');
+  container.innerHTML = '';
+  TIPS_DATA.forEach(cat => {
+    const section = document.createElement('div');
+    section.className = 'tips-category';
+    section.innerHTML = `<div class="tips-category-title">${cat.category}</div>`;
+    const grid = document.createElement('div');
+    grid.className = 'tips-grid';
+    cat.tips.forEach(tip => {
+      const card = document.createElement('div');
+      card.className = 'card tip-card';
+      card.innerHTML = `
+        <div class="tip-title">${tip.icon} ${tip.title}</div>
+        <div class="tip-desc">${tip.desc}</div>
+        <div class="tip-toggle">tap to read</div>`;
+      card.addEventListener('click', () => {
+        card.classList.toggle('open');
+        card.querySelector('.tip-toggle').textContent = card.classList.contains('open') ? 'tap to close' : 'tap to read';
+      });
+      grid.appendChild(card);
+    });
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+// ===== MEAL PLAN GENERATOR =====
+function generateMealPlan() {
+  const targetCals = parseInt(document.getElementById('plan-calories').value);
+  currentMealPlan = buildMealPlan(targetCals);
+  renderMealPlan(currentMealPlan, targetCals);
+  showToast('Meal plan generated!');
+}
+
+function shuffleMealPlan() {
+  const targetCals = parseInt(document.getElementById('plan-calories').value);
+  currentMealPlan = buildMealPlan(targetCals);
+  renderMealPlan(currentMealPlan, targetCals);
+  showToast('Plan shuffled! 🔀');
+}
+
+function buildMealPlan(target) {
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const plan = [];
+
+  dayNames.forEach(day => {
+    // Pick random meals — roughly hitting target
+    const bfast = pickRandom(MEAL_DB.breakfast);
+    const snack1 = pickRandom(MEAL_DB.snack);
+    const lunch = pickRandom(MEAL_DB.lunch);
+    const snack2 = pickRandom(MEAL_DB.snack);
+
+    const usedSoFar = bfast.cals + snack1.cals + lunch.cals + snack2.cals;
+    const dinnerTarget = target - usedSoFar;
+
+    // Pick dinner closest to remaining target
+    let dinner = MEAL_DB.dinner.reduce((best, d) =>
+      Math.abs(d.cals - dinnerTarget) < Math.abs(best.cals - dinnerTarget) ? d : best
+    );
+
+    const total = bfast.cals + snack1.cals + lunch.cals + snack2.cals + dinner.cals;
+
+    plan.push({
+      day, total,
+      meals: [
+        { label: 'Breakfast', ...bfast },
+        { label: 'Snack', ...snack1 },
+        { label: 'Lunch', ...lunch },
+        { label: 'Snack', ...snack2 },
+        { label: 'Dinner', ...dinner }
+      ]
+    });
+  });
+
+  return plan;
+}
+
+function pickRandom(arr) {
+  return { ...arr[Math.floor(Math.random() * arr.length)] };
+}
+
+function renderMealPlan(plan, target) {
+  const out = document.getElementById('meal-plan-output');
+  out.innerHTML = '';
+  plan.forEach((day, idx) => {
+    const card = document.createElement('div');
+    card.className = 'card day-card' + (idx === 0 ? ' open' : '');
+    card.innerHTML = `
+      <div class="day-card-header">
+        <h3>📅 ${day.day}</h3>
+        <span class="day-total">${day.total} cal</span>
+      </div>
+      <div class="day-meals" style="${idx === 0 ? 'display:block' : ''}">
+        ${day.meals.map(m => `
+          <div class="day-meal">
+            <span class="dm-label">${m.label}</span>
+            <span class="dm-food">${m.name}</span>
+            <span class="dm-cals">${m.cals} cal · ${m.protein}g protein</span>
+          </div>
+        `).join('')}
+      </div>`;
+    card.querySelector('.day-card-header').addEventListener('click', () => {
+      card.classList.toggle('open');
+      const meals = card.querySelector('.day-meals');
+      meals.style.display = card.classList.contains('open') ? 'block' : 'none';
+    });
+    out.appendChild(card);
+  });
+}
+
+// ===== EXERCISE PLAN GENERATOR =====
+function generateExercisePlan() {
+  const goal = document.getElementById('ex-goal').value;
+  const level = document.getElementById('ex-level').value;
+  const plan = EXERCISE_DB[goal]?.[level];
+  if (!plan) {
+    showToast('Plan not found', 'error');
+    return;
+  }
+  renderExercisePlan(plan);
+  showToast('Exercise plan generated! 💪');
+}
+
+function renderExercisePlan(plan) {
+  const out = document.getElementById('exercise-plan-output');
+  let totalWeeklyCals = 0;
+  let html = '';
+
+  plan.forEach(day => {
+    let dayCals = 0;
+    html += `<div class="workout-day">
+      <div class="workout-day-header">📅 ${day.day} — <span style="color:var(--accent);font-weight:500">${day.label}</span></div>
+      <div class="exercise-grid">`;
+
+    day.exercises.forEach(ex => {
+      dayCals += ex.cals;
+      totalWeeklyCals += ex.cals;
+      const setsReps = ex.sets ? `${ex.sets} × ${ex.reps}` : ex.reps;
+      html += `
+        <div class="card exercise-card">
+          <div class="ex-icon">${ex.icon}</div>
+          <div class="ex-info">
+            <div class="ex-name">${ex.name}</div>
+            <div class="ex-detail">${setsReps}</div>
+            <div class="ex-muscle">🎯 ${ex.muscle}</div>
+            ${ex.cals > 0 ? `<div class="ex-cals">🔥 ~${ex.cals} cal</div>` : ''}
+          </div>
+        </div>`;
+    });
+
+    html += `</div></div>`;
+  });
+
+  html += `
+    <div class="card weekly-burn-summary">
+      <div class="burn-value">🔥 ${totalWeeklyCals}</div>
+      <div class="burn-label">Estimated Calories Burned Per Week</div>
+    </div>`;
+
+  out.innerHTML = html;
+}
+
+// ===== INIT =====
+function init() {
+  // Set today's date on logger
+  document.getElementById('logger-date').value = getToday();
+
+  // Load saved profile into calculator
+  const profile = getProfile();
+  if (profile.age) document.getElementById('calc-age').value = profile.age;
+  if (profile.height) document.getElementById('calc-height').value = profile.height;
+  if (profile.weight) document.getElementById('calc-weight').value = profile.weight;
+  if (profile.gender) document.getElementById('calc-gender').value = profile.gender;
+  if (profile.activity) document.getElementById('calc-activity').value = profile.activity;
+
+  // Render tips
+  renderTips();
+
+  // Refresh dashboard
+  refreshDashboard();
+}
+
+// Start the app
+init();
+</script>
+</body>
+</html>
