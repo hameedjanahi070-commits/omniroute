@@ -1,9 +1,38 @@
 import Layout from "@/components/Layout";
 import FoodScanner from "@/components/FoodScanner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
+interface FoodItem {
+    id: number;
+    name: string;
+    cals: number;
+}
 
 export default function Logger() {
   const [showScanner, setShowScanner] = useState(false);
+  const [logs, setLogs] = useState<FoodItem[]>([]);
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemCals, setNewItemCals] = useState("");
+
+  useEffect(() => {
+    const savedLogs = localStorage.getItem("foodLogs");
+    if (savedLogs) {
+        setLogs(JSON.parse(savedLogs));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("foodLogs", JSON.stringify(logs));
+  }, [logs]);
+
+  const addLog = () => {
+    if (!newItemName || !newItemCals) return;
+    setLogs([...logs, { id: Date.now(), name: newItemName, cals: parseInt(newItemCals) }]);
+    setNewItemName("");
+    setNewItemCals("");
+  };
+
+  const totalCals = logs.reduce((sum, item) => sum + item.cals, 0);
 
   return (
     <Layout>
@@ -19,12 +48,31 @@ export default function Logger() {
         </button>
 
         {showScanner && <FoodScanner onScanResult={(food) => {
-            console.log("Scanned:", food);
+            setLogs([...logs, { id: Date.now(), ...food }]);
             setShowScanner(false);
-            alert("Scanned: " + food.name + " (" + food.cals + " cal)");
         }}/>}
 
-        {/* Existing Logger logic here */}
+        <div className="bg-[#1a1a2e] p-6 rounded-2xl border border-[#ffffff06] mb-6">
+            <h3 className="text-xl font-bold text-white mb-4">Add Food</h3>
+            <div className="flex gap-2">
+                <input type="text" placeholder="Food name" value={newItemName} onChange={(e) => setNewItemName(e.target.value)} className="w-full p-3 bg-[#0f0f1a] rounded-lg text-white" />
+                <input type="number" placeholder="Cals" value={newItemCals} onChange={(e) => setNewItemCals(e.target.value)} className="w-24 p-3 bg-[#0f0f1a] rounded-lg text-white" />
+                <button onClick={addLog} className="p-3 bg-teal-500 rounded-lg text-white font-bold">Add</button>
+            </div>
+        </div>
+
+        <div className="bg-[#1a1a2e] p-6 rounded-2xl border border-[#ffffff06]">
+            <h3 className="text-xl font-bold text-white mb-4">Today's Log</h3>
+            {logs.map(log => (
+                <div key={log.id} className="flex justify-between p-3 border-b border-[#ffffff06] text-white">
+                    <span>{log.name}</span>
+                    <span>{log.cals} cal</span>
+                </div>
+            ))}
+            <div className="mt-4 pt-4 border-t border-[#ffffff06] text-xl font-bold text-white text-right">
+                Total: {totalCals} calories
+            </div>
+        </div>
       </div>
     </Layout>
   );
